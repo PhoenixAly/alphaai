@@ -57,7 +57,7 @@ const errorMsg      = document.getElementById('errorMsg');
 const podsContainer = document.getElementById('podsContainer');
 const assumingQuery = document.getElementById('assumingQuery');
 const assumingDomain= document.getElementById('assumingDomain');
-const newQueryBtn   = document.getElementById('newQueryBtn');
+// newQueryBtn removed — navigation handled by exchangeNav prev/next
 const sidebarStep   = document.getElementById('sidebarStepText');
 const settingsBtn   = document.getElementById('settingsBtn');
 const settingsModal = document.getElementById('settingsModal');
@@ -66,38 +66,118 @@ const saveSettings  = document.getElementById('saveSettings');
 const cancelSettings= document.getElementById('cancelSettings');
 const promoBanner   = document.getElementById('promoBanner');
 const promoClose    = document.getElementById('promoClose');
-const newChatBtn    = document.getElementById('newChatBtn');
-const sessionBar    = document.getElementById('sessionBar');
-const sessionCount  = document.getElementById('sessionCount');
+const newChatBtn      = document.getElementById('newChatBtn');
+const sessionBar      = document.getElementById('sessionBar');
+const sessionCount    = document.getElementById('sessionCount');
 const sessionClearBtn = document.getElementById('sessionClearBtn');
+const exchangeNav     = document.getElementById('exchangeNav');
+const navPrev         = document.getElementById('navPrev');
+const navNext         = document.getElementById('navNext');
+const navCount        = document.getElementById('navCount');
 
-/* ══════════════════════ CHAT HISTORY ══════════════════════ */
-let chatHistory = []; // [{role:'user',content:'...'},{role:'assistant',content:'...'}]
+/* ══════════════════════ CHAT STATE ══════════════════════ */
+// Full conversation sent to Claude on every request
+let chatHistory = [];
 
-function updateSessionBar() {
-  const exchanges = Math.floor(chatHistory.length / 2);
-  if (exchanges === 0) {
-    sessionBar.hidden = true;
+// Each exchange: { query, markdown } — one entry per user turn
+let exchanges   = [];
+let currentPage = 0; // index into exchanges[]
+
+/* ── Navigation ── */
+function updateNav() {
+  const total = exchanges.length;
+  if (total <= 1) {
+    exchangeNav.hidden = true;
     return;
   }
-  sessionBar.hidden = false;
-  sessionCount.textContent = `${exchanges} exchange${exchanges !== 1 ? 's' : ''}`;
+  exchangeNav.hidden   = false;
+  navCount.textContent = `${currentPage + 1} / ${total}`;
+  navPrev.disabled     = currentPage === 0;
+  navNext.disabled     = currentPage === total - 1;
 }
 
-function startNewChat() {
-  chatHistory = [];
+function displayPage(index) {
+  currentPage = index;
+  const { query, markdown } = exchanges[index];
+
+  assumingQuery.textContent  = query;
+  assumingDomain.textContent = inferDomain(query);
+
+  const pods = parsePods(markdown);
+
+  // Update sidebar
+  const stepPod = pods.find(p =>
+    !p.title.toLowerCase().includes('input') &&
+    !p.title.toLowerCase().includes('interpretation')
+  );
+  sidebarStep.textContent = stepPod
+    ? plainText(stepPod.content).slice(0, 160) + (stepPod.content.length > 160 ? '…' : '')
+    : 'See the result pods on the left.';
   podsContainer.innerHTML = '';
+  pods.forEach((pod, i) => {
+    const el = document.createElement('div');
+    el.className = 'pod';
+    el.style.animationDelay = `${i * 0.04}s`;
+    el.innerHTML = `
+      <div class="pod-header">
+        <span class="pod-header-bar"></span>
+        ${escHtml(pod.title.toUpperCase())}
+      </div>
+      <div class="pod-body">${renderMarkdown(pod.content)}</div>`;
+    podsContainer.appendChild(el);
+  });
+
+  updateNav();
+
+  if (window.renderMathInElement) {
+    requestAnimationFrame(() => {
+      renderMathInElement(podsContainer, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true  },
+          { left: '$',  right: '$',  display: false },
+          { left: '\\[', right: '\\]', display: true  },
+          { left: '\\(', right: '\\)', display: false },
+        ],
+        throwOnError: false,
+      });
+    });
+  }
+}
+
+navPrev.addEventListener('click', () => {
+  if (currentPage > 0) displayPage(currentPage - 1);
+});
+
+navNext.addEventListener('click', () => {
+  if (currentPage < exchanges.length - 1) displayPage(currentPage + 1);
+});
+
+/* ── Session bar ── */
+function updateSessionBar() {
+  const count = exchanges.length;
+  if (count === 0) { sessionBar.hidden = true; return; }
+  sessionBar.hidden = false;
+  sessionCount.textContent = `${count} exchange${count !== 1 ? 's' : ''}`;
+}
+
+/* ── New chat ── */
+function startNewChat() {
+  chatHistory  = [];
+  exchanges    = [];
+  currentPage  = 0;
+  podsContainer.innerHTML = '';
+  exchangeNav.hidden = true;
   updateSessionBar();
   heroSection.classList.remove('hero--compact');
-  resultsArea.hidden  = true;
-  loadingArea.hidden  = true;
-  errorArea.hidden    = true;
-  queryInput.value    = '';
+  resultsArea.hidden = true;
+  loadingArea.hidden = true;
+  errorArea.hidden   = true;
+  queryInput.value   = '';
   queryInput.focus();
 }
 
 newChatBtn.addEventListener('click', () => {
-  if (chatHistory.length === 0) return;
+  if (exchanges.length === 0) return;
   if (confirm('Start a new chat? This will clear the current conversation.')) {
     startNewChat();
   }
@@ -207,11 +287,6 @@ queryInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') handleSearch();
 });
 
-newQueryBtn.addEventListener('click', () => {
-  if (confirm('Start a new chat? This will clear the current conversation.')) {
-    startNewChat();
-  }
-});
 
 /* ══════════════════════ VIEW STATE ══════════════════════ */
 function showHero() {
@@ -311,10 +386,14 @@ async function handleSearch() {
     const data = await res.json();
     const text = data?.content?.[0]?.text ?? '';
 
-    // Add assistant reply to history
+    // Store assistant reply
     chatHistory.push({ role: 'assistant', content: text });
+
+    // Store and display this exchange
+    exchanges.push({ query, markdown: text });
+    displayPage(exchanges.length - 1);
     updateSessionBar();
-    appendResults(query, text);
+    showResults();
 
   } catch (err) {
     clearTimeout(timeout);
@@ -328,73 +407,6 @@ async function handleSearch() {
   }
 }
 
-/* ══════════════════════ APPEND RESULTS ══════════════════════ */
-function appendResults(query, markdown) {
-  const pods = parsePods(markdown);
-  const isFirstQuery = chatHistory.length === 2; // one user + one assistant
-
-  // Update assuming bar with latest query
-  assumingQuery.textContent  = query;
-  assumingDomain.textContent = inferDomain(query);
-
-  // Update sidebar
-  const stepPod = pods.find(p =>
-    !p.title.toLowerCase().includes('input') &&
-    !p.title.toLowerCase().includes('interpretation')
-  );
-  sidebarStep.textContent = stepPod
-    ? plainText(stepPod.content).slice(0, 160) + (stepPod.content.length > 160 ? '…' : '')
-    : 'See the result pods on the left.';
-
-  // Add a separator between conversations (not before the first one)
-  if (!isFirstQuery) {
-    const sep = document.createElement('div');
-    sep.className = 'query-separator';
-    sep.innerHTML = `<span>${escHtml(query)}</span>`;
-    podsContainer.appendChild(sep);
-  }
-
-  // Append new pods (don't clear old ones)
-  const newPodEls = [];
-  pods.forEach((pod, i) => {
-    const el = document.createElement('div');
-    el.className = 'pod';
-    el.style.animationDelay = `${i * 0.05}s`;
-    el.innerHTML = `
-      <div class="pod-header">
-        <span class="pod-header-bar"></span>
-        ${escHtml(pod.title.toUpperCase())}
-      </div>
-      <div class="pod-body">${renderMarkdown(pod.content)}</div>`;
-    podsContainer.appendChild(el);
-    newPodEls.push(el);
-  });
-
-  showResults();
-
-  // Scroll to the new content
-  requestAnimationFrame(() => {
-    const first = newPodEls[0];
-    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-
-  // Render LaTeX only in the newly added pods
-  if (window.renderMathInElement) {
-    requestAnimationFrame(() => {
-      newPodEls.forEach(el => {
-        renderMathInElement(el, {
-          delimiters: [
-            { left: '$$', right: '$$', display: true  },
-            { left: '$',  right: '$',  display: false },
-            { left: '\\[', right: '\\]', display: true  },
-            { left: '\\(', right: '\\)', display: false },
-          ],
-          throwOnError: false,
-        });
-      });
-    });
-  }
-}
 
 /* ══════════════════════ POD PARSING ══════════════════════ */
 function parsePods(markdown) {

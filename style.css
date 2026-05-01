@@ -958,6 +958,50 @@ main {
   padding: 12px 24px;
 }
 
+/* ══════════════════════ EXCHANGE NAVIGATION ══════════════════════ */
+.exchange-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1a1a2a;
+  border: 1px solid #2e2a46;
+  border-radius: 5px;
+  padding: 7px 12px;
+  margin-bottom: 10px;
+  gap: 12px;
+}
+
+.enav-btn {
+  background: #2e2645;
+  border: 1px solid #3d3060;
+  border-radius: 4px;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 14px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.enav-btn:hover:not(:disabled) {
+  background: var(--purple);
+  border-color: var(--purple-lt);
+  color: #fff;
+}
+
+.enav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.enav-count {
+  color: #888;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  flex: 1;
+  text-align: center;
+}
+
 /* ══════════════════════ COMPACT HERO (chat mode) ══════════════════════ */
 .hero--compact {
   padding: 16px 24px 12px;
