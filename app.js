@@ -192,11 +192,15 @@ sessionClearBtn.addEventListener('click', () => {
 /* ══════════════════════ CAMERA ══════════════════════ */
 const cameraBtn      = document.getElementById('cameraBtn');
 const cameraModal    = document.getElementById('cameraModal');
+const cameraTitle    = document.getElementById('cameraTitle');
 const cameraVideo    = document.getElementById('cameraVideo');
 const cameraCanvas   = document.getElementById('cameraCanvas');
 const cameraViewport = document.getElementById('cameraViewport');
 const cameraPreview  = document.getElementById('cameraPreview');
 const capturedImg    = document.getElementById('capturedImg');
+const cropContainer  = document.getElementById('cropContainer');
+const cropOverlay    = document.getElementById('cropOverlay');
+const cropSelection  = document.getElementById('cropSelection');
 const captureBtn     = document.getElementById('captureBtn');
 const retakeBtn      = document.getElementById('retakeBtn');
 const usePhotoBtn    = document.getElementById('usePhotoBtn');
@@ -204,28 +208,154 @@ const attachedBar    = document.getElementById('attachedBar');
 const attachedThumb  = document.getElementById('attachedThumb');
 const removeImageBtn = document.getElementById('removeImageBtn');
 
-let cameraStream  = null;
-let pendingImage  = null; // base64 string (no prefix) when a photo is attached
+let cameraStream = null;
+let pendingImage = null;
 
+/* ── Crop state (all in pixels relative to cropContainer) ── */
+let cropRect  = { x: 0, y: 0, w: 0, h: 0 };
+let dragState = null; // null | { type, ... }
+const MIN_CROP = 20;
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function contSize() {
+  const r = cropContainer.getBoundingClientRect();
+  return { w: r.width, h: r.height, left: r.left, top: r.top };
+}
+
+function applyCropUI() {
+  const { w: cw, h: ch } = contSize();
+  cropSelection.style.left   = (cropRect.x / cw * 100) + '%';
+  cropSelection.style.top    = (cropRect.y / ch * 100) + '%';
+  cropSelection.style.width  = (cropRect.w / cw * 100) + '%';
+  cropSelection.style.height = (cropRect.h / ch * 100) + '%';
+}
+
+function initCrop() {
+  const { w, h } = contSize();
+  const pad = Math.min(w, h) * 0.06;
+  cropRect = { x: pad, y: pad, w: w - pad * 2, h: h - pad * 2 };
+  applyCropUI();
+}
+
+/* Draw a new selection by dragging on the overlay background */
+cropOverlay.addEventListener('pointerdown', e => {
+  if (e.target !== cropOverlay) return; // only bare overlay, not selection/handles
+  e.preventDefault();
+  const { left, top } = contSize();
+  const sx = e.clientX - left, sy = e.clientY - top;
+  dragState = { type: 'draw', sx, sy };
+  cropOverlay.setPointerCapture(e.pointerId);
+});
+
+/* Move selection by dragging its body */
+cropSelection.addEventListener('pointerdown', e => {
+  if (e.target.dataset.handle) return;
+  e.preventDefault(); e.stopPropagation();
+  const { left, top } = contSize();
+  dragState = { type: 'move',
+    mx: e.clientX - left, my: e.clientY - top,
+    rx: cropRect.x, ry: cropRect.y };
+  cropSelection.setPointerCapture(e.pointerId);
+});
+
+/* Resize via corner/edge handles */
+cropSelection.addEventListener('pointerdown', e => {
+  const h = e.target.dataset.handle;
+  if (!h) return;
+  e.preventDefault(); e.stopPropagation();
+  const { left, top } = contSize();
+  dragState = { type: 'resize', handle: h,
+    mx: e.clientX - left, my: e.clientY - top,
+    r0: { ...cropRect } };
+  e.target.setPointerCapture(e.pointerId);
+});
+
+document.addEventListener('pointermove', e => {
+  if (!dragState) return;
+  const { w: cw, h: ch, left, top } = contSize();
+  const mx = clamp(e.clientX - left, 0, cw);
+  const my = clamp(e.clientY - top,  0, ch);
+
+  if (dragState.type === 'draw') {
+    cropRect = {
+      x: Math.min(mx, dragState.sx), y: Math.min(my, dragState.sy),
+      w: Math.abs(mx - dragState.sx), h: Math.abs(my - dragState.sy),
+    };
+  } else if (dragState.type === 'move') {
+    const dx = mx - dragState.mx, dy = my - dragState.my;
+    cropRect.x = clamp(dragState.rx + dx, 0, cw - cropRect.w);
+    cropRect.y = clamp(dragState.ry + dy, 0, ch - cropRect.h);
+  } else if (dragState.type === 'resize') {
+    let { x, y, w, h } = dragState.r0;
+    const dx = mx - dragState.mx, dy = my - dragState.my;
+    const handle = dragState.handle;
+    if (handle.includes('e')) w = Math.max(MIN_CROP, w + dx);
+    if (handle.includes('s')) h = Math.max(MIN_CROP, h + dy);
+    if (handle.includes('w')) { x += dx; w = Math.max(MIN_CROP, w - dx); }
+    if (handle.includes('n')) { y += dy; h = Math.max(MIN_CROP, h - dy); }
+    x = clamp(x, 0, cw - MIN_CROP); y = clamp(y, 0, ch - MIN_CROP);
+    w = Math.min(w, cw - x);        h = Math.min(h, ch - y);
+    cropRect = { x, y, w, h };
+  }
+  applyCropUI();
+});
+
+document.addEventListener('pointerup', () => { dragState = null; });
+
+/* Apply the crop and return a base64 JPEG */
+function cropAndExport() {
+  const img = capturedImg;
+  const { w: dispW, h: dispH } = contSize();
+
+  // Account for object-fit: contain letterboxing
+  const natAR  = img.naturalWidth / img.naturalHeight;
+  const dispAR = dispW / dispH;
+  let imgW, imgH, offX, offY;
+  if (natAR > dispAR) {
+    imgW = dispW; imgH = dispW / natAR; offX = 0; offY = (dispH - imgH) / 2;
+  } else {
+    imgH = dispH; imgW = dispH * natAR; offX = (dispW - imgW) / 2; offY = 0;
+  }
+
+  const scaleX = img.naturalWidth  / imgW;
+  const scaleY = img.naturalHeight / imgH;
+
+  const srcX = Math.round((cropRect.x - offX) * scaleX);
+  const srcY = Math.round((cropRect.y - offY) * scaleY);
+  const srcW = Math.round(cropRect.w * scaleX);
+  const srcH = Math.round(cropRect.h * scaleY);
+
+  const out = document.createElement('canvas');
+  out.width  = Math.max(1, srcW);
+  out.height = Math.max(1, srcH);
+  out.getContext('2d').drawImage(
+    img, srcX, srcY, srcW, srcH, 0, 0, out.width, out.height
+  );
+  return out.toDataURL('image/jpeg', 0.88);
+}
+
+/* ── Event wiring ── */
 cameraBtn.addEventListener('click', openCamera);
 document.getElementById('cameraCloseBtn').addEventListener('click', closeCamera);
 document.getElementById('cameraCloseBtn2').addEventListener('click', closeCamera);
 cameraModal.addEventListener('click', e => { if (e.target === cameraModal) closeCamera(); });
 
 captureBtn.addEventListener('click', () => {
-  // Draw current video frame to canvas
   cameraCanvas.width  = cameraVideo.videoWidth  || 640;
   cameraCanvas.height = cameraVideo.videoHeight || 480;
   cameraCanvas.getContext('2d').drawImage(cameraVideo, 0, 0);
-
-  const dataUrl = cameraCanvas.toDataURL('image/jpeg', 0.85);
-  capturedImg.src = dataUrl;
+  capturedImg.src = cameraCanvas.toDataURL('image/jpeg', 0.92);
 
   cameraViewport.hidden = true;
   cameraPreview.hidden  = false;
   captureBtn.hidden     = true;
   retakeBtn.hidden      = false;
   usePhotoBtn.hidden    = false;
+  cameraTitle.textContent = 'Crop Photo';
+
+  // Init crop after image renders
+  requestAnimationFrame(() => requestAnimationFrame(initCrop));
 });
 
 retakeBtn.addEventListener('click', () => {
@@ -234,34 +364,30 @@ retakeBtn.addEventListener('click', () => {
   captureBtn.hidden     = false;
   retakeBtn.hidden      = true;
   usePhotoBtn.hidden    = true;
+  cameraTitle.textContent = 'Take a Photo';
 });
 
 usePhotoBtn.addEventListener('click', () => {
-  // Store base64 data (strip the data:image/jpeg;base64, prefix for the API)
-  const dataUrl = capturedImg.src;
+  const dataUrl = cropAndExport();
   pendingImage  = dataUrl.split(',')[1];
-
-  // Show thumbnail below search box
   attachedThumb.src  = dataUrl;
   attachedBar.hidden = false;
-
   closeCamera();
 });
 
 removeImageBtn.addEventListener('click', () => {
-  pendingImage       = null;
+  pendingImage = null;
   attachedBar.hidden = true;
   attachedThumb.src  = '';
 });
 
 async function openCamera() {
-  // Reset state
-  cameraViewport.hidden = false;
-  cameraPreview.hidden  = true;
-  captureBtn.hidden     = false;
-  retakeBtn.hidden      = true;
-  usePhotoBtn.hidden    = true;
-
+  cameraViewport.hidden   = false;
+  cameraPreview.hidden    = true;
+  captureBtn.hidden       = false;
+  retakeBtn.hidden        = true;
+  usePhotoBtn.hidden      = true;
+  cameraTitle.textContent = 'Take a Photo';
   cameraModal.classList.add('open');
 
   try {
@@ -272,16 +398,13 @@ async function openCamera() {
     cameraVideo.srcObject = cameraStream;
   } catch (err) {
     cameraModal.classList.remove('open');
-    alert(`Camera error: ${err.message}\n\nMake sure you allow camera access when prompted.`);
+    alert(`Camera error: ${err.message}\n\nPlease allow camera access when prompted.`);
   }
 }
 
 function closeCamera() {
   cameraModal.classList.remove('open');
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(t => t.stop());
-    cameraStream = null;
-  }
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
   cameraVideo.srcObject = null;
 }
 
