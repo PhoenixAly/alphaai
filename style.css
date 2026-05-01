@@ -1,6 +1,9 @@
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Ensure [hidden] always wins over any display: flex/block in author styles */
+[hidden] { display: none !important; }
+
 :root {
   --bg:            #2b2b2b;
   --bg-pod:        #1e1e1e;
