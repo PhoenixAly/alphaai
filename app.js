@@ -211,127 +211,79 @@ const removeImageBtn = document.getElementById('removeImageBtn');
 let cameraStream = null;
 let pendingImage = null;
 
-/* ── Crop state (all in pixels relative to cropContainer) ── */
-let cropRect  = { x: 0, y: 0, w: 0, h: 0 };
-let dragState = null; // null | { type, ... }
-const MIN_CROP = 20;
+/* ── Crop state ── */
+let cropRect = null;   // { x, y, w, h } in container pixels, set after drag
+let cropStart = null;  // { x, y } where the drag began
+let isCropDragging = false;
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-function contSize() {
-  const r = cropContainer.getBoundingClientRect();
-  return { w: r.width, h: r.height, left: r.left, top: r.top };
-}
+function contRect() { return cropContainer.getBoundingClientRect(); }
 
-function applyCropUI() {
-  const { w: cw, h: ch } = contSize();
+function updateCropSelection() {
+  if (!cropRect) return;
+  const { width: cw, height: ch } = contRect();
   cropSelection.style.left   = (cropRect.x / cw * 100) + '%';
   cropSelection.style.top    = (cropRect.y / ch * 100) + '%';
   cropSelection.style.width  = (cropRect.w / cw * 100) + '%';
   cropSelection.style.height = (cropRect.h / ch * 100) + '%';
 }
 
-function initCrop() {
-  const { w, h } = contSize();
-  const pad = Math.min(w, h) * 0.06;
-  cropRect = { x: pad, y: pad, w: w - pad * 2, h: h - pad * 2 };
-  applyCropUI();
-}
-
-/* Draw a new selection by dragging on the overlay background */
 cropOverlay.addEventListener('pointerdown', e => {
-  if (e.target !== cropOverlay) return; // only bare overlay, not selection/handles
   e.preventDefault();
-  const { left, top } = contSize();
-  const sx = e.clientX - left, sy = e.clientY - top;
-  dragState = { type: 'draw', sx, sy };
+  const { left, top } = contRect();
+  cropStart = { x: e.clientX - left, y: e.clientY - top };
+  isCropDragging = true;
+  cropSelection.hidden = true;
+  cropRect = null;
+  usePhotoBtn.disabled = true;
   cropOverlay.setPointerCapture(e.pointerId);
 });
 
-/* Move selection by dragging its body */
-cropSelection.addEventListener('pointerdown', e => {
-  if (e.target.dataset.handle) return;
-  e.preventDefault(); e.stopPropagation();
-  const { left, top } = contSize();
-  dragState = { type: 'move',
-    mx: e.clientX - left, my: e.clientY - top,
-    rx: cropRect.x, ry: cropRect.y };
-  cropSelection.setPointerCapture(e.pointerId);
-});
+cropOverlay.addEventListener('pointermove', e => {
+  if (!isCropDragging) return;
+  const { left, top, width, height } = contRect();
+  const mx = clamp(e.clientX - left, 0, width);
+  const my = clamp(e.clientY - top,  0, height);
 
-/* Resize via corner/edge handles */
-cropSelection.addEventListener('pointerdown', e => {
-  const h = e.target.dataset.handle;
-  if (!h) return;
-  e.preventDefault(); e.stopPropagation();
-  const { left, top } = contSize();
-  dragState = { type: 'resize', handle: h,
-    mx: e.clientX - left, my: e.clientY - top,
-    r0: { ...cropRect } };
-  e.target.setPointerCapture(e.pointerId);
-});
+  cropRect = {
+    x: Math.min(mx, cropStart.x),
+    y: Math.min(my, cropStart.y),
+    w: Math.abs(mx - cropStart.x),
+    h: Math.abs(my - cropStart.y),
+  };
 
-document.addEventListener('pointermove', e => {
-  if (!dragState) return;
-  const { w: cw, h: ch, left, top } = contSize();
-  const mx = clamp(e.clientX - left, 0, cw);
-  const my = clamp(e.clientY - top,  0, ch);
-
-  if (dragState.type === 'draw') {
-    cropRect = {
-      x: Math.min(mx, dragState.sx), y: Math.min(my, dragState.sy),
-      w: Math.abs(mx - dragState.sx), h: Math.abs(my - dragState.sy),
-    };
-  } else if (dragState.type === 'move') {
-    const dx = mx - dragState.mx, dy = my - dragState.my;
-    cropRect.x = clamp(dragState.rx + dx, 0, cw - cropRect.w);
-    cropRect.y = clamp(dragState.ry + dy, 0, ch - cropRect.h);
-  } else if (dragState.type === 'resize') {
-    let { x, y, w, h } = dragState.r0;
-    const dx = mx - dragState.mx, dy = my - dragState.my;
-    const handle = dragState.handle;
-    if (handle.includes('e')) w = Math.max(MIN_CROP, w + dx);
-    if (handle.includes('s')) h = Math.max(MIN_CROP, h + dy);
-    if (handle.includes('w')) { x += dx; w = Math.max(MIN_CROP, w - dx); }
-    if (handle.includes('n')) { y += dy; h = Math.max(MIN_CROP, h - dy); }
-    x = clamp(x, 0, cw - MIN_CROP); y = clamp(y, 0, ch - MIN_CROP);
-    w = Math.min(w, cw - x);        h = Math.min(h, ch - y);
-    cropRect = { x, y, w, h };
+  if (cropRect.w > 4 && cropRect.h > 4) {
+    cropSelection.hidden = false;
+    updateCropSelection();
   }
-  applyCropUI();
 });
 
-document.addEventListener('pointerup', () => { dragState = null; });
+cropOverlay.addEventListener('pointerup', () => {
+  isCropDragging = false;
+  // Enable Crop & Use only if a real box was drawn
+  usePhotoBtn.disabled = !cropRect || cropRect.w < 10 || cropRect.h < 10;
+});
 
-/* Apply the crop and return a base64 JPEG */
+/* Apply the crop selection and return a base64 JPEG */
 function cropAndExport() {
-  const img = capturedImg;
-  const { w: dispW, h: dispH } = contSize();
+  const img  = capturedImg;
+  const dispW = img.clientWidth;
+  const dispH = img.clientHeight;
 
-  // Account for object-fit: contain letterboxing
-  const natAR  = img.naturalWidth / img.naturalHeight;
-  const dispAR = dispW / dispH;
-  let imgW, imgH, offX, offY;
-  if (natAR > dispAR) {
-    imgW = dispW; imgH = dispW / natAR; offX = 0; offY = (dispH - imgH) / 2;
-  } else {
-    imgH = dispH; imgW = dispH * natAR; offX = (dispW - imgW) / 2; offY = 0;
-  }
+  // Scale from displayed container pixels → natural image pixels
+  const scaleX = img.naturalWidth  / dispW;
+  const scaleY = img.naturalHeight / dispH;
 
-  const scaleX = img.naturalWidth  / imgW;
-  const scaleY = img.naturalHeight / imgH;
-
-  const srcX = Math.round((cropRect.x - offX) * scaleX);
-  const srcY = Math.round((cropRect.y - offY) * scaleY);
-  const srcW = Math.round(cropRect.w * scaleX);
-  const srcH = Math.round(cropRect.h * scaleY);
+  const srcX = Math.round(cropRect.x * scaleX);
+  const srcY = Math.round(cropRect.y * scaleY);
+  const srcW = Math.max(1, Math.round(cropRect.w * scaleX));
+  const srcH = Math.max(1, Math.round(cropRect.h * scaleY));
 
   const out = document.createElement('canvas');
-  out.width  = Math.max(1, srcW);
-  out.height = Math.max(1, srcH);
-  out.getContext('2d').drawImage(
-    img, srcX, srcY, srcW, srcH, 0, 0, out.width, out.height
-  );
+  out.width  = srcW;
+  out.height = srcH;
+  out.getContext('2d').drawImage(img, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
   return out.toDataURL('image/jpeg', 0.88);
 }
 
@@ -347,15 +299,15 @@ captureBtn.addEventListener('click', () => {
   cameraCanvas.getContext('2d').drawImage(cameraVideo, 0, 0);
   capturedImg.src = cameraCanvas.toDataURL('image/jpeg', 0.92);
 
-  cameraViewport.hidden = true;
-  cameraPreview.hidden  = false;
-  captureBtn.hidden     = true;
-  retakeBtn.hidden      = false;
-  usePhotoBtn.hidden    = false;
-  cameraTitle.textContent = 'Crop Photo';
-
-  // Init crop after image renders
-  requestAnimationFrame(() => requestAnimationFrame(initCrop));
+  cameraViewport.hidden    = true;
+  cameraPreview.hidden     = false;
+  captureBtn.hidden        = true;
+  retakeBtn.hidden         = false;
+  usePhotoBtn.hidden       = false;
+  usePhotoBtn.disabled     = true;   // enabled once user draws a box
+  cropSelection.hidden     = true;
+  cropRect                 = null;
+  cameraTitle.textContent  = 'Crop Photo';
 });
 
 retakeBtn.addEventListener('click', () => {

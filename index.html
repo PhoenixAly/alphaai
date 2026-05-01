@@ -286,19 +286,10 @@
       <div class="crop-container" id="cropContainer">
         <img id="capturedImg" src="" alt="Captured photo" draggable="false">
         <div class="crop-overlay" id="cropOverlay">
-          <div class="crop-selection" id="cropSelection">
-            <div class="crop-handle" data-handle="nw"></div>
-            <div class="crop-handle" data-handle="n"></div>
-            <div class="crop-handle" data-handle="ne"></div>
-            <div class="crop-handle" data-handle="w"></div>
-            <div class="crop-handle" data-handle="e"></div>
-            <div class="crop-handle" data-handle="sw"></div>
-            <div class="crop-handle" data-handle="s"></div>
-            <div class="crop-handle" data-handle="se"></div>
-          </div>
+          <div class="crop-selection" id="cropSelection" hidden></div>
         </div>
       </div>
-      <p class="crop-hint">Drag to move · Drag handles to resize · Drag outside to redraw</p>
+      <p class="crop-hint">Click and drag to select the area you want to crop</p>
     </div>
 
     <!-- Hidden canvas used to capture + crop -->
