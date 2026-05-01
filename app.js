@@ -227,9 +227,13 @@ async function handleSearch() {
 
   showLoading();
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
   try {
     const res = await fetch(proxyUrl, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type':      'application/json',
         'x-api-key':         apiKey,
@@ -246,6 +250,8 @@ async function handleSearch() {
       }),
     });
 
+    clearTimeout(timeout);
+
     if (!res.ok) {
       let detail = `HTTP ${res.status}`;
       try {
@@ -260,7 +266,12 @@ async function handleSearch() {
     renderResults(query, text);
 
   } catch (err) {
-    showError(`Error: ${err.message}`);
+    clearTimeout(timeout);
+    if (err.name === 'AbortError') {
+      showError('Request timed out after 30 seconds. Check your proxy URL and API key.');
+    } else {
+      showError(`Error: ${err.message}`);
+    }
   }
 }
 
