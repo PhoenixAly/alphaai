@@ -958,6 +958,86 @@ main {
   padding: 12px 24px;
 }
 
+/* ══════════════════════ COMPACT HERO (chat mode) ══════════════════════ */
+.hero--compact {
+  padding: 16px 24px 12px;
+}
+
+.hero--compact .logo-row,
+.hero--compact .hero-tagline,
+.hero--compact .examples {
+  display: none;
+}
+
+/* ══════════════════════ SESSION BAR ══════════════════════ */
+.session-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: #777;
+  font-size: 12px;
+}
+
+.session-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5a3fa0;
+  display: inline-block;
+  flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.session-clear {
+  background: none;
+  border: none;
+  color: #5a3fa0;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  margin-left: 4px;
+  transition: color 0.15s;
+}
+
+.session-clear:hover { color: var(--purple-lt); }
+
+/* ══════════════════════ NEW CHAT BUTTON (topbar) ══════════════════════ */
+.topbar-link.upgrade {
+  color: var(--amber) !important;
+}
+
+/* ══════════════════════ QUERY SEPARATOR ══════════════════════ */
+.query-separator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 10px;
+  color: #666;
+  font-size: 12px;
+}
+
+.query-separator::before,
+.query-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #2e2e2e;
+}
+
+.query-separator span {
+  color: #888;
+  white-space: nowrap;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ══════════════════════ RESPONSIVE ══════════════════════ */
 @media (max-width: 700px) {
   .hero { padding: 32px 16px 24px; }

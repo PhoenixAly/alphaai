@@ -66,6 +66,48 @@ const saveSettings  = document.getElementById('saveSettings');
 const cancelSettings= document.getElementById('cancelSettings');
 const promoBanner   = document.getElementById('promoBanner');
 const promoClose    = document.getElementById('promoClose');
+const newChatBtn    = document.getElementById('newChatBtn');
+const sessionBar    = document.getElementById('sessionBar');
+const sessionCount  = document.getElementById('sessionCount');
+const sessionClearBtn = document.getElementById('sessionClearBtn');
+
+/* ══════════════════════ CHAT HISTORY ══════════════════════ */
+let chatHistory = []; // [{role:'user',content:'...'},{role:'assistant',content:'...'}]
+
+function updateSessionBar() {
+  const exchanges = Math.floor(chatHistory.length / 2);
+  if (exchanges === 0) {
+    sessionBar.hidden = true;
+    return;
+  }
+  sessionBar.hidden = false;
+  sessionCount.textContent = `${exchanges} exchange${exchanges !== 1 ? 's' : ''}`;
+}
+
+function startNewChat() {
+  chatHistory = [];
+  podsContainer.innerHTML = '';
+  updateSessionBar();
+  heroSection.classList.remove('hero--compact');
+  resultsArea.hidden  = true;
+  loadingArea.hidden  = true;
+  errorArea.hidden    = true;
+  queryInput.value    = '';
+  queryInput.focus();
+}
+
+newChatBtn.addEventListener('click', () => {
+  if (chatHistory.length === 0) return;
+  if (confirm('Start a new chat? This will clear the current conversation.')) {
+    startNewChat();
+  }
+});
+
+sessionClearBtn.addEventListener('click', () => {
+  if (confirm('Start a new chat? This will clear the current conversation.')) {
+    startNewChat();
+  }
+});
 
 /* ══════════════════════ PROMO BANNER ══════════════════════ */
 if (localStorage.getItem('promo_dismissed')) {
@@ -166,41 +208,43 @@ queryInput.addEventListener('keydown', e => {
 });
 
 newQueryBtn.addEventListener('click', () => {
-  showHero();
-  queryInput.value = '';
-  requestAnimationFrame(() => queryInput.focus());
+  if (confirm('Start a new chat? This will clear the current conversation.')) {
+    startNewChat();
+  }
 });
 
 /* ══════════════════════ VIEW STATE ══════════════════════ */
 function showHero() {
-  heroSection.hidden  = false;
+  heroSection.classList.remove('hero--compact');
   resultsArea.hidden  = true;
   loadingArea.hidden  = true;
   errorArea.hidden    = true;
 }
 
 function showLoading() {
-  heroSection.hidden  = true;
+  // Keep hero visible (compact if in chat mode) while loading
+  heroSection.classList.add('hero--compact');
   resultsArea.hidden  = true;
   errorArea.hidden    = true;
   loadingArea.hidden  = false;
 }
 
 function showError(msg) {
-  heroSection.hidden  = false;
-  loadingArea.hidden  = true;
-  resultsArea.hidden  = true;
-  errorArea.hidden    = false;
+  loadingArea.hidden   = true;
+  errorArea.hidden     = false;
   errorMsg.textContent = msg;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Keep results visible if there's existing chat history
+  if (chatHistory.length > 0) {
+    resultsArea.hidden = false;
+  }
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 }
 
 function showResults() {
-  heroSection.hidden  = true;
+  heroSection.classList.add('hero--compact');
   loadingArea.hidden  = true;
   errorArea.hidden    = true;
   resultsArea.hidden  = false;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 /* ══════════════════════ MAIN SEARCH ══════════════════════ */
@@ -225,6 +269,9 @@ async function handleSearch() {
     return;
   }
 
+  // Add user message to history
+  chatHistory.push({ role: 'user', content: query });
+
   showLoading();
 
   const controller = new AbortController();
@@ -242,9 +289,7 @@ async function handleSearch() {
       body: JSON.stringify({
         model:      MODEL,
         system:     SYSTEM_PROMPT,
-        messages: [
-          { role: 'user', content: query },
-        ],
+        messages:   chatHistory,
         temperature:  0.15,
         max_tokens:   2000,
       }),
@@ -258,15 +303,23 @@ async function handleSearch() {
         const j = await res.json();
         detail = j?.error?.message || detail;
       } catch (_) { /* ignore */ }
+      // Remove the user message we just added since it failed
+      chatHistory.pop();
       throw new Error(detail);
     }
 
     const data = await res.json();
     const text = data?.content?.[0]?.text ?? '';
-    renderResults(query, text);
+
+    // Add assistant reply to history
+    chatHistory.push({ role: 'assistant', content: text });
+    updateSessionBar();
+    appendResults(query, text);
 
   } catch (err) {
     clearTimeout(timeout);
+    // Remove the user message if it wasn't already removed
+    if (chatHistory[chatHistory.length - 1]?.role === 'user') chatHistory.pop();
     if (err.name === 'AbortError') {
       showError('Request timed out after 30 seconds. Check your proxy URL and API key.');
     } else {
@@ -275,14 +328,16 @@ async function handleSearch() {
   }
 }
 
-/* ══════════════════════ RENDER RESULTS ══════════════════════ */
-function renderResults(query, markdown) {
+/* ══════════════════════ APPEND RESULTS ══════════════════════ */
+function appendResults(query, markdown) {
   const pods = parsePods(markdown);
+  const isFirstQuery = chatHistory.length === 2; // one user + one assistant
 
-  assumingQuery.textContent = query;
+  // Update assuming bar with latest query
+  assumingQuery.textContent  = query;
   assumingDomain.textContent = inferDomain(query);
 
-  // Populate sidebar with first non-interpretation pod content
+  // Update sidebar
   const stepPod = pods.find(p =>
     !p.title.toLowerCase().includes('input') &&
     !p.title.toLowerCase().includes('interpretation')
@@ -291,8 +346,16 @@ function renderResults(query, markdown) {
     ? plainText(stepPod.content).slice(0, 160) + (stepPod.content.length > 160 ? '…' : '')
     : 'See the result pods on the left.';
 
-  podsContainer.innerHTML = '';
+  // Add a separator between conversations (not before the first one)
+  if (!isFirstQuery) {
+    const sep = document.createElement('div');
+    sep.className = 'query-separator';
+    sep.innerHTML = `<span>${escHtml(query)}</span>`;
+    podsContainer.appendChild(sep);
+  }
 
+  // Append new pods (don't clear old ones)
+  const newPodEls = [];
   pods.forEach((pod, i) => {
     const el = document.createElement('div');
     el.className = 'pod';
@@ -304,21 +367,30 @@ function renderResults(query, markdown) {
       </div>
       <div class="pod-body">${renderMarkdown(pod.content)}</div>`;
     podsContainer.appendChild(el);
+    newPodEls.push(el);
   });
 
   showResults();
 
-  // Render LaTeX after DOM insertion
+  // Scroll to the new content
+  requestAnimationFrame(() => {
+    const first = newPodEls[0];
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // Render LaTeX only in the newly added pods
   if (window.renderMathInElement) {
     requestAnimationFrame(() => {
-      renderMathInElement(podsContainer, {
-        delimiters: [
-          { left: '$$', right: '$$', display: true  },
-          { left: '$',  right: '$',  display: false },
-          { left: '\\[', right: '\\]', display: true  },
-          { left: '\\(', right: '\\)', display: false },
-        ],
-        throwOnError: false,
+      newPodEls.forEach(el => {
+        renderMathInElement(el, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true  },
+            { left: '$',  right: '$',  display: false },
+            { left: '\\[', right: '\\]', display: true  },
+            { left: '\\(', right: '\\)', display: false },
+          ],
+          throwOnError: false,
+        });
       });
     });
   }

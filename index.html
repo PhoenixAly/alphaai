@@ -18,7 +18,7 @@
 <nav class="topbar">
   <div class="topbar-spacer"></div>
   <div class="topbar-right">
-    <button class="topbar-link upgrade">UPGRADE TO PRO <span class="caret">▾</span></button>
+    <button class="topbar-link upgrade" id="newChatBtn">✦ NEW CHAT</button>
     <button class="topbar-link">APPS <span class="caret">▾</span></button>
     <button class="topbar-link">TOUR</button>
     <button class="topbar-signin" id="settingsBtn">⚙&thinsp;API Key</button>
@@ -186,6 +186,13 @@
       </div>
 
     </div><!-- end .search-wrap -->
+
+    <!-- Session indicator -->
+    <div class="session-bar" id="sessionBar" hidden>
+      <span class="session-dot"></span>
+      <span id="sessionCount">1 exchange</span> in this session
+      <button class="session-clear" id="sessionClearBtn">New chat →</button>
+    </div>
 
     <!-- Example queries -->
     <div class="examples" id="examplesRow">
