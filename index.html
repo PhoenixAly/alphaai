@@ -250,10 +250,16 @@
 <!-- ══════════════════════ SETTINGS MODAL ══════════════════════ -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal" role="dialog" aria-modal="true">
-    <h2>Claude API Key</h2>
-    <p>Your key is saved to <code>localStorage</code> and sent directly to <code>api.anthropic.com</code> — it never touches any other server.</p>
-    <label for="apiKeyInput">API Key</label>
-    <input type="password" id="apiKeyInput" placeholder="sk-…" autocomplete="off" spellcheck="false">
+    <h2>Claude Settings</h2>
+    <p>Saved to <code>localStorage</code> only. See <strong>README.md</strong> for the free Cloudflare Worker setup (~2 min).</p>
+
+    <label for="apiKeyInput">Claude API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+
+    <label for="proxyUrlInput" style="margin-top:14px">Cloudflare Worker Proxy URL</label>
+    <input type="url" id="proxyUrlInput" placeholder="https://your-worker.your-name.workers.dev" autocomplete="off" spellcheck="false">
+    <p style="font-size:11px;color:#666;margin-top:6px;margin-bottom:0">Required — browsers can't call Anthropic directly (CORS policy). Deploy <code>worker.js</code> to a free Cloudflare Worker and paste its URL above.</p>
+
     <div class="modal-actions">
       <button class="btn-secondary" id="cancelSettings">Cancel</button>
       <button class="btn-primary" id="saveSettings">Save</button>

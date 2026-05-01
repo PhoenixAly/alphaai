@@ -1,77 +1,96 @@
-# AlphaAI — Wolfram Alpha–style AI Interface
+# AlphaAI — Wolfram Alpha–style Claude Interface
 
-A static single-page app styled after Wolfram Alpha, powered by **GPT-4o** via the OpenAI API.
+A static single-page app styled after Wolfram Alpha, powered by **Claude** (Anthropic API).
 
-## Features
+---
 
-- **Wolfram Alpha aesthetic** — dark charcoal theme, star logo, amber/orange wordmark, purple-glowing search box, dark result pods
-- **Structured responses** — GPT-4o is prompted to return `## Section` headings; each section renders as its own pod
-- **KaTeX math rendering** — LaTeX expressions (`$...$` and `$$...$$`) are rendered beautifully in the browser
-- **Markdown support** — tables, code blocks, bold/italic, lists all styled
-- **Client-side API key** — stored in `localStorage`; never leaves your browser
-- **Example queries** — click to populate and run instantly
-- **No build step** — open `index.html` directly or serve with any static host
+## Why a Cloudflare Worker is required
 
-## Setup
+Browsers enforce a security rule called **CORS** that blocks direct calls to `api.anthropic.com`
+from a web page. The fix is a tiny free proxy that sits in the middle:
 
-### 1. Get an OpenAI API key
-
-Sign in at [platform.openai.com](https://platform.openai.com) → API keys → Create new key.
-
-### 2. Run locally
-
-**Option A — just open the file:**
 ```
-open index.html
+Browser → Cloudflare Worker → api.anthropic.com
 ```
-(Works in most browsers. Chrome may block `file://` fetch requests; use Option B if so.)
 
-**Option B — serve with Python:**
+The Worker adds the missing CORS headers and forwards your request. Your API key is passed
+through in the header and never stored anywhere — not in the Worker, not on any server.
+
+---
+
+## Setup (one-time, ~5 minutes total)
+
+### Step 1 — Deploy the Cloudflare Worker (free)
+
+1. Go to **[workers.cloudflare.com](https://workers.cloudflare.com)** and sign up / log in (free account, no credit card needed).
+2. Click **"Create application"** → **"Create Worker"**.
+3. Delete all the default code in the editor.
+4. Copy the entire contents of **`worker.js`** (in this repo) and paste it in.
+5. Click **"Deploy"**.
+6. Copy the Worker URL shown at the top — it looks like:
+   ```
+   https://alphaai-proxy.YOUR-NAME.workers.dev
+   ```
+
+### Step 2 — Get a Claude API key
+
+1. Go to **[console.anthropic.com](https://console.anthropic.com)** → API Keys → **Create Key**.
+2. Copy the key — it starts with `sk-ant-…`.
+
+### Step 3 — Configure the site
+
+1. Open the site (locally or on GitHub Pages).
+2. Click **⚙ API Key** in the top-right corner.
+3. Paste your **Claude API key** in the first box.
+4. Paste your **Cloudflare Worker URL** in the second box.
+5. Click **Save**.
+
+Both values are stored in your browser's `localStorage` and never leave your device
+(except the API key, which goes to your own Worker, which forwards it to Anthropic).
+
+---
+
+## Running locally
+
 ```bash
+# Option A — Python
 python -m http.server 8080
-# then open http://localhost:8080
-```
+# open http://localhost:8080
 
-**Option C — serve with Node (npx):**
-```bash
+# Option B — Node
 npx serve .
 ```
 
-### 3. Enter your API key
-
-Click **⚙ API Key** in the top-right corner, paste your `sk-…` key, and click **Save**.  
-The key is stored in `localStorage` and is only used for direct calls to `api.openai.com`.
-
-### 4. Search
-
-Type a query (or click an example) and press **Enter** or the search button.
+---
 
 ## Hosting on GitHub Pages
 
-1. Push the three files (`index.html`, `style.css`, `app.js`) to a GitHub repository.
-2. Go to **Settings → Pages → Source** and select the branch/root.
-3. Your site will be live at `https://<username>.github.io/<repo>/`.
+1. Push this repo to GitHub (public or private).
+2. Go to **Settings → Pages → Source: Deploy from branch → `main` / `/ (root)`** → Save.
+3. Your site will be live at `https://YOUR_USERNAME.github.io/REPO_NAME/` in ~30 seconds.
+4. Open it, click ⚙, and enter your API key + Worker URL once — done.
 
-Each visitor enters their own API key — no server needed.
+To push for the first time:
+```bash
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git push -u origin main
+```
+
+---
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Page structure and CDN script tags |
-| `style.css` | All styling (Wolfram Alpha dark theme) |
-| `app.js` | Search logic, OpenAI API call, markdown+math rendering |
+| `index.html` | Page structure |
+| `style.css` | Wolfram Alpha dark theme |
+| `app.js` | Search logic, Claude API call via proxy, markdown+KaTeX rendering |
+| `worker.js` | Paste this into a Cloudflare Worker to enable CORS |
 | `README.md` | This file |
 
-## Dependencies (all via CDN, no install needed)
+## Dependencies (CDN, no install)
 
 | Library | Purpose |
 |---------|---------|
 | [KaTeX 0.16](https://katex.org) | LaTeX math rendering |
 | [marked 9](https://marked.js.org) | Markdown → HTML |
-
-## Notes
-
-- The system prompt instructs GPT-4o to respond with `## Heading` sections — this is what creates the individual pods.
-- Math must be written in LaTeX (`$x^2$`, `$$\int_0^1 x\,dx$$`) for KaTeX to render it. GPT-4o usually does this automatically.
-- The API key is **never sent anywhere except `api.openai.com`** directly from your browser.

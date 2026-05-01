@@ -1,7 +1,9 @@
 /* ══════════════════════ AlphaAI — app.js ══════════════════════ */
 
-const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL      = 'claude-sonnet-4-6';
+// Direct Anthropic URL — only works server-side.
+// Browser requests go through the Cloudflare Worker proxy URL stored in localStorage.
+const ANTHROPIC_DIRECT = 'https://api.anthropic.com/v1/messages';
+const MODEL            = 'claude-sonnet-4-6';
 
 const SYSTEM_PROMPT = `\
 You are a precise computational knowledge engine, similar to Wolfram Alpha.
@@ -105,8 +107,11 @@ document.querySelectorAll('.mt-btn[data-insert]').forEach(btn => {
 });
 
 /* ══════════════════════ SETTINGS MODAL ══════════════════════ */
+const proxyInput = document.getElementById('proxyUrlInput');
+
 function openSettings() {
-  apiKeyInput.value = localStorage.getItem('claude_api_key') || '';
+  apiKeyInput.value = localStorage.getItem('claude_api_key')   || '';
+  proxyInput.value  = localStorage.getItem('claude_proxy_url') || '';
   settingsModal.classList.add('open');
   requestAnimationFrame(() => apiKeyInput.focus());
 }
@@ -119,9 +124,15 @@ settingsBtn.addEventListener('click', openSettings);
 cancelSettings.addEventListener('click', closeSettings);
 
 saveSettings.addEventListener('click', () => {
-  const key = apiKeyInput.value.trim();
-  if (key) localStorage.setItem('claude_api_key', key);
-  else localStorage.removeItem('claude_api_key');
+  const key   = apiKeyInput.value.trim();
+  const proxy = proxyInput.value.trim();
+
+  if (key)   localStorage.setItem('claude_api_key',   key);
+  else       localStorage.removeItem('claude_api_key');
+
+  if (proxy) localStorage.setItem('claude_proxy_url', proxy);
+  else       localStorage.removeItem('claude_proxy_url');
+
   closeSettings();
 });
 
@@ -197,22 +208,32 @@ async function handleSearch() {
   const query = queryInput.value.trim();
   if (!query) return;
 
-  const apiKey = localStorage.getItem('claude_api_key');
+  const apiKey  = localStorage.getItem('claude_api_key');
+  const proxyUrl = localStorage.getItem('claude_proxy_url');
+
   if (!apiKey) {
     openSettings();
+    return;
+  }
+
+  if (!proxyUrl) {
+    showError(
+      'No proxy URL set. ' +
+      'Browsers block direct Anthropic API calls (CORS). ' +
+      'Click ⚙ API Key and paste your Cloudflare Worker URL — see README for setup steps.'
+    );
     return;
   }
 
   showLoading();
 
   try {
-    const res = await fetch(CLAUDE_URL, {
+    const res = await fetch(proxyUrl, {
       method: 'POST',
       headers: {
         'Content-Type':      'application/json',
         'x-api-key':         apiKey,
         'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-request-key-in-browser': 'true',
       },
       body: JSON.stringify({
         model:      MODEL,
