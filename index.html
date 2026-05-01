@@ -119,7 +119,7 @@
             <span class="itab-icon">∫<sub>a</sub></span>
             <span>MATH INPUT</span>
           </button>
-          <button class="itab itab-camera" title="Camera input">
+          <button class="itab itab-camera" id="cameraBtn" title="Take a photo">
             <svg viewBox="0 0 20 20" width="15" height="15" fill="currentColor">
               <path d="M7 3a1 1 0 00-.894.553L5.382 5H3a2 2 0 00-2 2v8a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2h-2.382l-.724-1.447A1 1 0 0013 3H7zm4 8a2 2 0 11-4 0 2 2 0 014 0z"/>
             </svg>
@@ -186,6 +186,13 @@
       </div>
 
     </div><!-- end .search-wrap -->
+
+    <!-- Attached image preview -->
+    <div class="attached-bar" id="attachedBar" hidden>
+      <img class="attached-thumb" id="attachedThumb" src="" alt="Attached photo">
+      <span>Photo attached</span>
+      <button class="attached-remove" id="removeImageBtn" title="Remove">✕</button>
+    </div>
 
     <!-- Session indicator -->
     <div class="session-bar" id="sessionBar" hidden>
@@ -260,6 +267,36 @@
   </section>
 
 </main>
+
+<!-- ══════════════════════ CAMERA MODAL ══════════════════════ -->
+<div class="modal-overlay" id="cameraModal">
+  <div class="modal camera-modal-inner" role="dialog" aria-modal="true">
+    <div class="camera-header">
+      <h2>Take a Photo</h2>
+      <button class="camera-close-btn" id="cameraCloseBtn">✕</button>
+    </div>
+
+    <!-- Live webcam feed -->
+    <div class="camera-viewport" id="cameraViewport">
+      <video id="cameraVideo" autoplay playsinline muted></video>
+    </div>
+
+    <!-- Snapshot preview (shown after capture) -->
+    <div class="camera-preview" id="cameraPreview" hidden>
+      <img id="capturedImg" src="" alt="Captured photo">
+    </div>
+
+    <!-- Hidden canvas used to grab the frame -->
+    <canvas id="cameraCanvas" hidden></canvas>
+
+    <div class="camera-actions">
+      <button class="btn-secondary" id="cameraCloseBtn2">Cancel</button>
+      <button class="btn-primary" id="captureBtn">📷 Capture</button>
+      <button class="btn-secondary" id="retakeBtn" hidden>↩ Retake</button>
+      <button class="btn-primary"  id="usePhotoBtn" hidden>✓ Use this photo</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════ SETTINGS MODAL ══════════════════════ -->
 <div class="modal-overlay" id="settingsModal">

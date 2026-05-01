@@ -189,6 +189,102 @@ sessionClearBtn.addEventListener('click', () => {
   }
 });
 
+/* ══════════════════════ CAMERA ══════════════════════ */
+const cameraBtn      = document.getElementById('cameraBtn');
+const cameraModal    = document.getElementById('cameraModal');
+const cameraVideo    = document.getElementById('cameraVideo');
+const cameraCanvas   = document.getElementById('cameraCanvas');
+const cameraViewport = document.getElementById('cameraViewport');
+const cameraPreview  = document.getElementById('cameraPreview');
+const capturedImg    = document.getElementById('capturedImg');
+const captureBtn     = document.getElementById('captureBtn');
+const retakeBtn      = document.getElementById('retakeBtn');
+const usePhotoBtn    = document.getElementById('usePhotoBtn');
+const attachedBar    = document.getElementById('attachedBar');
+const attachedThumb  = document.getElementById('attachedThumb');
+const removeImageBtn = document.getElementById('removeImageBtn');
+
+let cameraStream  = null;
+let pendingImage  = null; // base64 string (no prefix) when a photo is attached
+
+cameraBtn.addEventListener('click', openCamera);
+document.getElementById('cameraCloseBtn').addEventListener('click', closeCamera);
+document.getElementById('cameraCloseBtn2').addEventListener('click', closeCamera);
+cameraModal.addEventListener('click', e => { if (e.target === cameraModal) closeCamera(); });
+
+captureBtn.addEventListener('click', () => {
+  // Draw current video frame to canvas
+  cameraCanvas.width  = cameraVideo.videoWidth  || 640;
+  cameraCanvas.height = cameraVideo.videoHeight || 480;
+  cameraCanvas.getContext('2d').drawImage(cameraVideo, 0, 0);
+
+  const dataUrl = cameraCanvas.toDataURL('image/jpeg', 0.85);
+  capturedImg.src = dataUrl;
+
+  cameraViewport.hidden = true;
+  cameraPreview.hidden  = false;
+  captureBtn.hidden     = true;
+  retakeBtn.hidden      = false;
+  usePhotoBtn.hidden    = false;
+});
+
+retakeBtn.addEventListener('click', () => {
+  cameraViewport.hidden = false;
+  cameraPreview.hidden  = true;
+  captureBtn.hidden     = false;
+  retakeBtn.hidden      = true;
+  usePhotoBtn.hidden    = true;
+});
+
+usePhotoBtn.addEventListener('click', () => {
+  // Store base64 data (strip the data:image/jpeg;base64, prefix for the API)
+  const dataUrl = capturedImg.src;
+  pendingImage  = dataUrl.split(',')[1];
+
+  // Show thumbnail below search box
+  attachedThumb.src  = dataUrl;
+  attachedBar.hidden = false;
+
+  closeCamera();
+});
+
+removeImageBtn.addEventListener('click', () => {
+  pendingImage       = null;
+  attachedBar.hidden = true;
+  attachedThumb.src  = '';
+});
+
+async function openCamera() {
+  // Reset state
+  cameraViewport.hidden = false;
+  cameraPreview.hidden  = true;
+  captureBtn.hidden     = false;
+  retakeBtn.hidden      = true;
+  usePhotoBtn.hidden    = true;
+
+  cameraModal.classList.add('open');
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } },
+      audio: false,
+    });
+    cameraVideo.srcObject = cameraStream;
+  } catch (err) {
+    cameraModal.classList.remove('open');
+    alert(`Camera error: ${err.message}\n\nMake sure you allow camera access when prompted.`);
+  }
+}
+
+function closeCamera() {
+  cameraModal.classList.remove('open');
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  cameraVideo.srcObject = null;
+}
+
 /* ══════════════════════ PROMO BANNER ══════════════════════ */
 if (localStorage.getItem('promo_dismissed')) {
   promoBanner.classList.add('hidden');
@@ -344,8 +440,23 @@ async function handleSearch() {
     return;
   }
 
+  // Build message content — plain text, or array with image if one is attached
+  const messageContent = pendingImage
+    ? [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: pendingImage } },
+        { type: 'text',  text: query || 'Describe this image.' },
+      ]
+    : query;
+
+  // Clear the attached image after using it
+  if (pendingImage) {
+    pendingImage       = null;
+    attachedBar.hidden = true;
+    attachedThumb.src  = '';
+  }
+
   // Add user message to history
-  chatHistory.push({ role: 'user', content: query });
+  chatHistory.push({ role: 'user', content: messageContent });
 
   showLoading();
 

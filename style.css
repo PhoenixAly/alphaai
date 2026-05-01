@@ -1085,6 +1085,116 @@ main {
   text-overflow: ellipsis;
 }
 
+/* ══════════════════════ ATTACHED IMAGE BAR ══════════════════════ */
+.attached-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  background: #1c1c2e;
+  border: 1px solid #3a2e60;
+  border-radius: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #aaa;
+  max-width: 780px;
+  width: 100%;
+}
+
+.attached-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid #4a3a70;
+}
+
+.attached-remove {
+  background: none;
+  border: none;
+  color: #777;
+  cursor: pointer;
+  font-size: 13px;
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.attached-remove:hover { color: #fff; background: #4a2020; }
+
+/* ══════════════════════ CAMERA MODAL ══════════════════════ */
+.camera-modal-inner {
+  width: 560px;
+  max-width: 95vw;
+  padding: 0;
+  overflow: hidden;
+}
+
+.camera-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #2e2e2e;
+}
+
+.camera-header h2 {
+  color: var(--orange);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.camera-close-btn {
+  background: none;
+  border: none;
+  color: #777;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+
+.camera-close-btn:hover { color: #fff; }
+
+.camera-viewport {
+  background: #000;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+}
+
+.camera-viewport video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.camera-preview {
+  background: #000;
+  width: 100%;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+}
+
+.camera-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.camera-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 14px 20px;
+  border-top: 1px solid #2e2e2e;
+}
+
 /* ══════════════════════ RESPONSIVE ══════════════════════ */
 @media (max-width: 700px) {
   .hero { padding: 32px 16px 24px; }
