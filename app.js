@@ -1,7 +1,7 @@
 /* ══════════════════════ AlphaAI — app.js ══════════════════════ */
 
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
-const MODEL      = 'gpt-4o';
+const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
+const MODEL      = 'claude-sonnet-4-6';
 
 const SYSTEM_PROMPT = `\
 You are a precise computational knowledge engine, similar to Wolfram Alpha.
@@ -106,7 +106,7 @@ document.querySelectorAll('.mt-btn[data-insert]').forEach(btn => {
 
 /* ══════════════════════ SETTINGS MODAL ══════════════════════ */
 function openSettings() {
-  apiKeyInput.value = localStorage.getItem('openai_api_key') || '';
+  apiKeyInput.value = localStorage.getItem('claude_api_key') || '';
   settingsModal.classList.add('open');
   requestAnimationFrame(() => apiKeyInput.focus());
 }
@@ -120,8 +120,8 @@ cancelSettings.addEventListener('click', closeSettings);
 
 saveSettings.addEventListener('click', () => {
   const key = apiKeyInput.value.trim();
-  if (key) localStorage.setItem('openai_api_key', key);
-  else localStorage.removeItem('openai_api_key');
+  if (key) localStorage.setItem('claude_api_key', key);
+  else localStorage.removeItem('claude_api_key');
   closeSettings();
 });
 
@@ -197,7 +197,7 @@ async function handleSearch() {
   const query = queryInput.value.trim();
   if (!query) return;
 
-  const apiKey = localStorage.getItem('openai_api_key');
+  const apiKey = localStorage.getItem('claude_api_key');
   if (!apiKey) {
     openSettings();
     return;
@@ -206,17 +206,19 @@ async function handleSearch() {
   showLoading();
 
   try {
-    const res = await fetch(OPENAI_URL, {
+    const res = await fetch(CLAUDE_URL, {
       method: 'POST',
       headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type':      'application/json',
+        'x-api-key':         apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-request-key-in-browser': 'true',
       },
       body: JSON.stringify({
-        model:       MODEL,
+        model:      MODEL,
+        system:     SYSTEM_PROMPT,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user',   content: query },
+          { role: 'user', content: query },
         ],
         temperature:  0.15,
         max_tokens:   2000,
@@ -233,7 +235,7 @@ async function handleSearch() {
     }
 
     const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content ?? '';
+    const text = data?.content?.[0]?.text ?? '';
     renderResults(query, text);
 
   } catch (err) {
