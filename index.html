@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlphaAI — Computational Intelligence</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ══════════════════════ TOP BAR ══════════════════════ -->
+<nav class="topbar">
+  <div class="topbar-spacer"></div>
+  <div class="topbar-right">
+    <button class="topbar-link upgrade">UPGRADE TO PRO <span class="caret">▾</span></button>
+    <button class="topbar-link">APPS <span class="caret">▾</span></button>
+    <button class="topbar-link">TOUR</button>
+    <button class="topbar-signin" id="settingsBtn">⚙&thinsp;API Key</button>
+    <div class="topbar-avatar">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+        <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+      </svg>
+      <span class="caret">▾</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════════ PROMO BANNER ══════════════════════ -->
+<div class="promo-banner" id="promoBanner">
+  <button class="promo-close" id="promoClose" aria-label="Close">✕</button>
+  <div class="promo-inner">
+    <div class="promo-art">
+      <div class="promo-card step1">
+        <div class="promo-card-label">STEP 1</div>
+        <div class="promo-card-text">Simplify the following:<br><span class="math-sm">x²−3x+2</span></div>
+      </div>
+      <div class="promo-card step2">
+        <div class="promo-card-label">STEP 2</div>
+        <div class="promo-card-text">The factors of 2 that sum to −3 are −1 and −2.</div>
+      </div>
+      <div class="promo-answer">
+        Answer:<br>(x−1)(x−2)
+      </div>
+      <div class="promo-wolf">
+        <svg viewBox="0 0 80 80" width="80" height="80">
+          <!-- Simplified Wolfram mascot star shape -->
+          <polygon points="40,4 46,30 68,16 54,36 76,40 54,44 68,64 46,50 40,76 34,50 12,64 26,44 4,40 26,36 12,16 34,30" fill="#c84b10"/>
+          <circle cx="40" cy="40" r="14" fill="#d85520"/>
+          <circle cx="35" cy="37" r="3" fill="white"/>
+          <circle cx="45" cy="37" r="3" fill="white"/>
+          <circle cx="35" cy="37" r="1.5" fill="#222"/>
+          <circle cx="45" cy="37" r="1.5" fill="#222"/>
+          <path d="M34 45 Q40 50 46 45" stroke="white" stroke-width="1.5" fill="none"/>
+        </svg>
+      </div>
+    </div>
+    <div class="promo-text">
+      <h2>Step-by-Step Solutions with <strong>Pro</strong></h2>
+      <p>Get a step ahead with your homework</p>
+      <button class="promo-cta">Go <strong>Pro</strong> Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MAIN ══════════════════════ -->
+<main>
+  <section class="hero" id="heroSection">
+
+    <p class="hero-tagline">FROM THE MAKERS OF <em>WOLFRAM LANGUAGE</em> AND <em>MATHEMATICA</em></p>
+
+    <div class="logo-row">
+      <svg class="hero-star" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="50,4 57,36 82,16 62,42 96,50 62,58 82,84 57,64 50,96 43,64 18,84 38,58 4,50 38,42 18,16 43,36" fill="#dd4b14"/>
+      </svg>
+      <span class="wordmark"><span class="wm-wolfram">Wolfram</span><span class="wm-alpha">Alpha</span></span>
+    </div>
+
+    <!-- Search area -->
+    <div class="search-wrap">
+
+      <!-- Input box -->
+      <div class="search-box" id="searchBox">
+        <input
+          type="text"
+          id="queryInput"
+          placeholder="Enter a query or expression…"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Search query"
+        >
+        <div class="search-actions">
+          <button class="sa-btn" id="clearBtn" title="Clear">
+            <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/>
+            </svg>
+          </button>
+          <button class="sa-btn sa-menu" id="searchBtn" title="Search">
+            <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+              <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab/icon bar -->
+      <div class="input-bar">
+        <div class="input-tabs">
+          <button class="itab active" data-mode="nl" id="tabNL">
+            <span class="itab-star">★</span>
+            <span>NATURAL LANGUAGE</span>
+          </button>
+          <button class="itab" data-mode="math" id="tabMath">
+            <span class="itab-icon">∫<sub>a</sub></span>
+            <span>MATH INPUT</span>
+          </button>
+          <button class="itab itab-camera" title="Camera input">
+            <svg viewBox="0 0 20 20" width="15" height="15" fill="currentColor">
+              <path d="M7 3a1 1 0 00-.894.553L5.382 5H3a2 2 0 00-2 2v8a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2h-2.382l-.724-1.447A1 1 0 0013 3H7zm4 8a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-icons">
+          <button class="iicon" title="Favorites">★</button>
+          <button class="iicon" title="Roots">√</button>
+          <button class="iicon" title="Integral">∫</button>
+          <button class="iicon" title="Discrete">∷</button>
+          <button class="iicon" title="Greek / special" style="font-size:11px">≈ω</button>
+          <button class="iicon" title="More">…</button>
+        </div>
+      </div>
+
+      <!-- Math symbol toolbar -->
+      <div class="math-toolbar" id="mathToolbar">
+        <button class="mt-btn" data-insert="/" title="Fraction">
+          <span class="mt-frac"><span>a</span><span>b</span></span>
+        </button>
+        <button class="mt-btn" data-insert="^" title="Power">
+          <span class="mt-pow">a<sup>n</sup></span>
+        </button>
+        <button class="mt-btn" data-insert="sqrt(" title="Square root">
+          <span class="mt-sqrt">√<span>a</span></span>
+        </button>
+        <button class="mt-btn" data-insert="nthroot(" title="nth root">
+          <span class="mt-sqrt"><sup>n</sup>√<span>a</span></span>
+        </button>
+        <button class="mt-btn" data-insert="nthroot(" title="Radical">
+          <span class="mt-sqrt"><sup>n</sup>√<span>a<sup>m</sup></span></span>
+        </button>
+        <button class="mt-btn" data-insert="d/dx " title="Derivative">
+          <span class="mt-frac"><span>d</span><span>dx</span></span>
+        </button>
+        <button class="mt-btn" data-insert="d2/dx2 " title="2nd Derivative">
+          <span class="mt-frac"><span>d<sup>2</sup></span><span>dx<sup>2</sup></span></span>
+        </button>
+        <button class="mt-btn" data-insert="integrate " title="Integral">
+          <span>∫<sub>a</sub></span>
+        </button>
+        <button class="mt-btn" data-insert="integrate from a to b " title="Definite integral">
+          <span class="mt-defint"><sup>b</sup>∫<sub>a</sub></span>
+        </button>
+        <button class="mt-btn" data-insert="sum from n=1 to inf of " title="Sum">
+          <span>Σ<sub style="font-size:8px">n=1</sub></span>
+        </button>
+        <button class="mt-btn" data-insert="limit as x->0 of " title="Limit">
+          <span style="font-size:10px">lim<sub>x→0</sub></span>
+        </button>
+        <button class="mt-btn" data-insert="[a, b; c, d] " title="Matrix">
+          <span class="mt-matrix">
+            <span>■</span><span>■</span>
+            <span>■</span><span>■</span>
+          </span>
+        </button>
+        <button class="mt-btn" data-insert="" title="More symbols" id="moreSymbols">
+          <span class="mt-grid">
+            <span>■</span><span>■</span><span>■</span>
+            <span>■</span><span>■</span><span>■</span>
+            <span>■</span><span>■</span><span>■</span>
+          </span>
+        </button>
+      </div>
+
+    </div><!-- end .search-wrap -->
+
+    <!-- Example queries -->
+    <div class="examples" id="examplesRow">
+      <span class="examples-label">Try:</span>
+      <button class="example-btn" data-query="What is the integral of sin(x)?">integral of sin(x)</button>
+      <button class="example-btn" data-query="Factor x^2 - 5x + 6">factor x²−5x+6</button>
+      <button class="example-btn" data-query="Solve x^2 + 3x - 4 = 0">solve x²+3x−4=0</button>
+      <button class="example-btn" data-query="What is the speed of light?">speed of light</button>
+      <button class="example-btn" data-query="Derivative of e^x * cos(x)">d/dx [eˣ·cos x]</button>
+      <button class="example-btn" data-query="What is the population of France?">population of France</button>
+      <button class="example-btn" data-query="Convert 72 Fahrenheit to Celsius">72°F → Celsius</button>
+      <button class="example-btn" data-query="Taylor series expansion of ln(1+x)">Taylor series of ln(1+x)</button>
+    </div>
+
+  </section><!-- end .hero -->
+
+  <!-- Loading -->
+  <div id="loadingArea" class="loading-area" hidden>
+    <div class="spinner"></div>
+    <span>Computing…</span>
+  </div>
+
+  <!-- Error -->
+  <div id="errorArea" class="error-area" hidden>
+    <div class="error-pod">
+      <svg viewBox="0 0 20 20" width="15" height="15" fill="currentColor" style="flex-shrink:0">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+      </svg>
+      <span id="errorMsg"></span>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <section id="resultsArea" class="results-area" hidden>
+    <div class="results-inner">
+
+      <div class="results-main">
+        <div class="assuming-bar">
+          Assuming &ldquo;<span id="assumingQuery"></span>&rdquo; is referring to
+          <span id="assumingDomain">math</span>
+          &nbsp;|&nbsp;
+          <a href="#" class="assuming-alt" id="assumingAlt" tabindex="-1">Use as a date instead</a>
+        </div>
+        <div id="podsContainer" class="pods-container"></div>
+        <button class="new-query-btn" id="newQueryBtn">← New query</button>
+      </div>
+
+      <aside class="results-sidebar">
+        <div class="sidebar-card">
+          <h3>Get help with<br>that <strong>first step</strong></h3>
+          <p>(and all the others)</p>
+          <div class="sidebar-step">STEP 1</div>
+          <p class="sidebar-body" id="sidebarStepText">Run a query to see step-by-step hints here.</p>
+        </div>
+      </aside>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════ SETTINGS MODAL ══════════════════════ -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h2>OpenAI API Key</h2>
+    <p>Your key is saved to <code>localStorage</code> and sent directly to <code>api.openai.com</code> — it never touches any other server.</p>
+    <label for="apiKeyInput">API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-…" autocomplete="off" spellcheck="false">
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelSettings">Cancel</button>
+      <button class="btn-primary" id="saveSettings">Save</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <span>AlphaAI — GPT-4o powered &nbsp;·&nbsp; Inspired by Wolfram Alpha</span>
+  <span>API key stored locally, never shared</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
