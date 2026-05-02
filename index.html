@@ -273,21 +273,26 @@
       <button class="camera-close-btn" id="cameraCloseBtn">✕</button>
     </div>
 
-    <!-- Live webcam feed -->
-    <div class="camera-viewport" id="cameraViewport">
-      <video id="cameraVideo" autoplay playsinline muted></video>
-    </div>
+    <!-- Body: preview fills this area; viewfinder sits in the corner -->
+    <div class="camera-body">
 
-    <!-- Snapshot + crop overlay (shown after capture) -->
-    <div class="camera-preview" id="cameraPreview" hidden>
-      <div class="crop-container" id="cropContainer">
-        <img id="capturedImg" src="" alt="Captured photo" draggable="false">
-        <div class="crop-overlay" id="cropOverlay">
-          <div class="crop-selection" id="cropSelection" hidden></div>
-        </div>
+      <!-- Live webcam feed — small PiP in bottom-right -->
+      <div class="camera-viewport" id="cameraViewport">
+        <video id="cameraVideo" autoplay playsinline muted></video>
       </div>
-      <p class="crop-hint">Click and drag to select the area you want to crop</p>
-    </div>
+
+      <!-- Snapshot + crop overlay (shown after capture) -->
+      <div class="camera-preview" id="cameraPreview" hidden>
+        <div class="crop-container" id="cropContainer">
+          <img id="capturedImg" src="" alt="Captured photo" draggable="false">
+          <div class="crop-overlay" id="cropOverlay">
+            <div class="crop-selection" id="cropSelection" hidden></div>
+          </div>
+        </div>
+        <p class="crop-hint">Click and drag to select the area you want to crop</p>
+      </div>
+
+    </div><!-- end .camera-body -->
 
     <!-- Hidden canvas used to capture + crop -->
     <canvas id="cameraCanvas" hidden></canvas>
