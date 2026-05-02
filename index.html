@@ -217,7 +217,7 @@
   </section><!-- end .hero -->
 
   <!-- Scrollable area: only this part moves -->
-  <div class="scroll-panel">
+  <div class="scroll-panel" id="scrollPanel">
 
     <!-- Loading -->
     <div id="loadingArea" class="loading-area" hidden>
@@ -241,19 +241,6 @@
 
         <div class="results-main">
 
-          <!-- Exchange navigation -->
-          <div class="exchange-nav" id="exchangeNav" hidden>
-            <button class="enav-btn" id="navPrev" title="Previous answer">&#8592; Prev</button>
-            <span class="enav-count" id="navCount">1 / 1</span>
-            <button class="enav-btn" id="navNext" title="Next answer">Next &#8594;</button>
-          </div>
-
-          <div class="assuming-bar">
-            Assuming &ldquo;<span id="assumingQuery"></span>&rdquo; is referring to
-            <span id="assumingDomain">math</span>
-            &nbsp;|&nbsp;
-            <a href="#" class="assuming-alt" id="assumingAlt" tabindex="-1">Use as a date instead</a>
-          </div>
           <div id="podsContainer" class="pods-container"></div>
         </div>
 

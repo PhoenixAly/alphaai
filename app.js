@@ -55,9 +55,7 @@ const loadingArea   = document.getElementById('loadingArea');
 const errorArea     = document.getElementById('errorArea');
 const errorMsg      = document.getElementById('errorMsg');
 const podsContainer = document.getElementById('podsContainer');
-const assumingQuery = document.getElementById('assumingQuery');
-const assumingDomain= document.getElementById('assumingDomain');
-// newQueryBtn removed — navigation handled by exchangeNav prev/next
+const scrollPanel   = document.getElementById('scrollPanel');
 const sidebarStep   = document.getElementById('sidebarStepText');
 const settingsBtn   = document.getElementById('settingsBtn');
 const settingsModal = document.getElementById('settingsModal');
@@ -70,50 +68,22 @@ const newChatBtn      = document.getElementById('newChatBtn');
 const sessionBar      = document.getElementById('sessionBar');
 const sessionCount    = document.getElementById('sessionCount');
 const sessionClearBtn = document.getElementById('sessionClearBtn');
-const exchangeNav     = document.getElementById('exchangeNav');
-const navPrev         = document.getElementById('navPrev');
-const navNext         = document.getElementById('navNext');
-const navCount        = document.getElementById('navCount');
 
 /* ══════════════════════ CHAT STATE ══════════════════════ */
-// Full conversation sent to Claude on every request
 let chatHistory = [];
+let exchanges   = []; // { query, markdown } — kept for session count only
 
-// Each exchange: { query, markdown } — one entry per user turn
-let exchanges   = [];
-let currentPage = 0; // index into exchanges[]
-
-/* ── Navigation ── */
-function updateNav() {
-  const total = exchanges.length;
-  if (total <= 1) {
-    exchangeNav.hidden = true;
-    return;
-  }
-  exchangeNav.hidden   = false;
-  navCount.textContent = `${currentPage + 1} / ${total}`;
-  navPrev.disabled     = currentPage === 0;
-  navNext.disabled     = currentPage === total - 1;
-}
-
-function displayPage(index) {
-  currentPage = index;
-  const { query, markdown } = exchanges[index];
-
-  assumingQuery.textContent  = query;
-  assumingDomain.textContent = inferDomain(query);
-
+/* ── Append a new exchange to the scrolling results list ── */
+function appendExchange(query, markdown) {
   const pods = parsePods(markdown);
 
-  // Update sidebar
-  const stepPod = pods.find(p =>
-    !p.title.toLowerCase().includes('input') &&
-    !p.title.toLowerCase().includes('interpretation')
-  );
-  sidebarStep.textContent = stepPod
-    ? plainText(stepPod.content).slice(0, 160) + (stepPod.content.length > 160 ? '…' : '')
-    : 'See the result pods on the left.';
-  podsContainer.innerHTML = '';
+  // Query separator label
+  const sep = document.createElement('div');
+  sep.className = 'query-separator';
+  sep.innerHTML = `<span>${escHtml(query)}</span>`;
+  podsContainer.appendChild(sep);
+
+  // Pods
   pods.forEach((pod, i) => {
     const el = document.createElement('div');
     el.className = 'pod';
@@ -127,7 +97,14 @@ function displayPage(index) {
     podsContainer.appendChild(el);
   });
 
-  updateNav();
+  // Update sidebar with first non-interpretation pod
+  const stepPod = pods.find(p =>
+    !p.title.toLowerCase().includes('input') &&
+    !p.title.toLowerCase().includes('interpretation')
+  );
+  sidebarStep.textContent = stepPod
+    ? plainText(stepPod.content).slice(0, 160) + (stepPod.content.length > 160 ? '…' : '')
+    : 'See the result pods on the left.';
 
   if (window.renderMathInElement) {
     requestAnimationFrame(() => {
@@ -140,17 +117,12 @@ function displayPage(index) {
         ],
         throwOnError: false,
       });
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     });
+  } else {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }
 }
-
-navPrev.addEventListener('click', () => {
-  if (currentPage > 0) displayPage(currentPage - 1);
-});
-
-navNext.addEventListener('click', () => {
-  if (currentPage < exchanges.length - 1) displayPage(currentPage + 1);
-});
 
 /* ── Session bar ── */
 function updateSessionBar() {

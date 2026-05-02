@@ -26,15 +26,14 @@
   --border-pod:    #2e2e2e;
 }
 
-html, body { height: 100%; }
+html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Helvetica Neue', Arial, sans-serif;
   font-size: 15px;
   line-height: 1.6;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -231,19 +230,13 @@ main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow: hidden;
-  min-height: 0;
 }
 
-/* Scrollable panel — only results/loading/error scroll, hero stays fixed */
 .scroll-panel {
-  flex: 1;
-  overflow-y: auto;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 0;
 }
 
 .hero {
@@ -253,7 +246,6 @@ main {
   padding: 48px 24px 32px;
   width: 100%;
   max-width: 940px;
-  flex-shrink: 0;
 }
 
 .hero-tagline {
