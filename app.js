@@ -549,7 +549,7 @@ async function handleSearch() {
 
     // Store and display this exchange
     exchanges.push({ query, markdown: text });
-    displayPage(exchanges.length - 1);
+    appendExchange(query, text);
     updateSessionBar();
     showResults();
 
