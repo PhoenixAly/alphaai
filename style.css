@@ -1135,8 +1135,8 @@ main {
 /* ══════════════════════ CAMERA MODAL ══════════════════════ */
 #cameraModal {
   align-items: flex-end;
-  justify-content: flex-start;
-  padding: 0 0 24px 24px;
+  justify-content: flex-end;
+  padding: 0 24px 24px 0;
   background: transparent;
   backdrop-filter: none;
 }
